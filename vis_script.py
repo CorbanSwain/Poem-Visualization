@@ -26,15 +26,17 @@ def wav_to_float(wavefile):
 
 clipdir = '/Users/CorbanSwain/Google Drive'
 def load_wav(clipname):
+    save_fname = os.path.join('data', clipname + '.npy')
     try:
-        save_data = np.load(clipname + '.npy')
+        save_data = np.load(save_fname)
         t, a = (save_data[:, 0], save_data[:, 1])
     except:
         clipfile = os.path.join(clipdir, clipname + '.wav') 
         print('Beginning File Processing...')
         t, a = np.array(wav_to_float(clipfile))
-        np.save(clipname, np.column_stack((t, a)))
+        np.save(save_fname, np.column_stack((t, a)))
     print('Finished file import!')
+    plot_linear(t, a)
     return (t, a)
 
 def gaussian(x, sig):
@@ -68,25 +70,36 @@ def subsample_audio(t, a):
 
     a_sub = a_sub / max(a_sub)
     t_sub = t[selection]
+    plot_2_linear(t, a, t_sub, a_sub)
     return (t_sub, a_sub)
 
-def polar_convert(t, a, flatness):
+def polar_convert(t, a, flatness=2):
     numel = len(t)
     theta = np.linspace(0, -2 * np.pi, numel) + (np.pi / 2)
     r = np.power((a / np.log(flatness)), 1.5) + 1
     theta = np.concatenate((theta, np.flip(theta, 0)))
     r = np.concatenate((r, np.ones((numel,))))
+    plot_polar(r, theta)
     return (r, theta)
 
+plot_style = 'fivethirtyeight'
 def plot_linear(t, a, show=True):
-    plt.figure(0)
-    plt.plot(t, a)
-    if show: plt.show(block=False)
+    plt.figure(0, (15, 5))
+    plt.style.use(plot_style)  
+    plt.plot(t, a, linewidth=0.5)
+    plt.xlabel('Time (s)')
+    plt.ylabel('Amplitude')
+    plt.title('Audio Waveform')
+    if show: plt.show(block=True)
 
 def plot_2_linear(t1, a1, t2, a2, show=True):
-    plt.figure(1)
-    plt.plot(t1, a1)
+    plt.figure(1, (15, 5))
+    plt.style.use(plot_style)
+    plt.plot(t1, a1, linewidth=0.5)
     plt.plot(t2, a2)
+    plt.xlabel('Time (s)')
+    plt.ylabel('Amplitude')
+    plt.title('Raw Waveform + Smoothed Intensity')
     if show: plt.show(block=True)
 
 def make_poly(r, theta):
@@ -97,18 +110,24 @@ def make_poly(r, theta):
     return (poly, lim)
 
 def plot_polar(r, theta, show=True):
-    poly, lim = make_poly(r, theta) 
+    half_numel = round(len(r) / 2)
+    poly, lim = make_poly(r[:half_numel],
+                          theta[:half_numel]) 
     plt.figure(1)
     ax = plt.subplot(111, aspect='equal')
     ax.add_patch(poly)
     lim = lim * 1.1
     ax.set_xlim((-lim, lim))
     ax.set_ylim((-lim, lim))
+    plt.xlabel('x')
+    plt.ylabel('y')
+    plt.title('Polar Conversion')
+    plt.style.use(plot_style)
     if show: plt.show(block=True)
 
 def plot_polar_2(r, theta, show=True):
     poly, lim = make_poly(r, theta) 
-    fig = plt.figure(2, (20, 20))
+    fig = plt.figure(2, (10, 10))
     ax = plt.subplot(111, aspect='equal')
     lim = lim * 1.1
     ax.set_xlim((-lim, lim))
@@ -117,8 +136,8 @@ def plot_polar_2(r, theta, show=True):
     plt.axis('off')
     plt.tight_layout()
     poly.set_facecolor('azure')
-    fig.patch.set_facecolor('xkcd:navy')
-    ax.set_facecolor('xkcd:navy')
+    fig.patch.set_facecolor(np.array([20, 20, 16]) / 255)
+    ax.set_facecolor(np.array([20, 20, 16]) / 255)
     
     ax.add_patch(poly)
     if show: plt.show(block=True)
@@ -126,11 +145,7 @@ def plot_polar_2(r, theta, show=True):
 def visualize(clipname):
     t, a = load_wav(clipname)
     t_s, a_s = subsample_audio(t, a)
-
-    flatness = 2
-    r, th = polar_convert(t_s, a_s, flatness)
-    plot_2_linear(t, a, t_s, a_s, False)
-    plot_polar(r, th, False)
+    r, th = polar_convert(t_s, a_s)
     plot_polar_2(r, th)
     
     
