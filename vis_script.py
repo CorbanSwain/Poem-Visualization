@@ -89,17 +89,38 @@ def plot_2_linear(t1, a1, t2, a2, show=True):
     plt.plot(t2, a2)
     if show: plt.show(block=True)
 
-def plot_polar(r, theta, show=True):
+def make_poly(r, theta):
     xs = np.multiply(r, np.cos(theta))
     ys = np.multiply(r, np.sin(theta))
     poly = Polygon(np.column_stack([xs, ys]), True)
+    lim = max([-min(xs), max(xs), -min(ys), max(ys)])
+    return (poly, lim)
+
+def plot_polar(r, theta, show=True):
+    poly, lim = make_poly(r, theta) 
     plt.figure(1)
     ax = plt.subplot(111, aspect='equal')
     ax.add_patch(poly)
-    lim = max([-min(xs), max(xs), -min(ys), max(ys)])
     lim = lim * 1.1
     ax.set_xlim((-lim, lim))
     ax.set_ylim((-lim, lim))
+    if show: plt.show(block=True)
+
+def plot_polar_2(r, theta, show=True):
+    poly, lim = make_poly(r, theta) 
+    fig = plt.figure(2, (20, 20))
+    ax = plt.subplot(111, aspect='equal')
+    lim = lim * 1.1
+    ax.set_xlim((-lim, lim))
+    ax.set_ylim((-lim, lim))
+
+    plt.axis('off')
+    plt.tight_layout()
+    poly.set_facecolor('azure')
+    fig.patch.set_facecolor('xkcd:navy')
+    ax.set_facecolor('xkcd:navy')
+    
+    ax.add_patch(poly)
     if show: plt.show(block=True)
 
 def visualize(clipname):
@@ -108,6 +129,8 @@ def visualize(clipname):
 
     flatness = 2
     r, th = polar_convert(t_s, a_s, flatness)
-    plot_2_linear(t, a, t_s, a_s)
-    plot_polar(r, th,)
+    plot_2_linear(t, a, t_s, a_s, False)
+    plot_polar(r, th, False)
+    plot_polar_2(r, th)
+    
     
