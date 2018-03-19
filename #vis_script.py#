@@ -40,7 +40,8 @@ plt.plot(t, a)
 numel = len(t)
 a_rect = np.multiply(a, a)
 window_size = round(numel * 0.05)
-smooth_fxn = np.ones((window_size,)) / window_size
+smooth_fxn_1 = np.ones((window_size,)) / window_size
+smooth_fxn_2 = gg
 a_smooth = np.convolve(a_rect, smooth_fxn, mode='same')
 a_smooth = a_smooth / max(a_smooth)
 plt.plot(t, a_smooth)
