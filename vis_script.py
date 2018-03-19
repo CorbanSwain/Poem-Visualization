@@ -136,10 +136,11 @@ def plot_polar_2(r, theta, show=True):
     plt.axis('off')
     plt.tight_layout()
     poly.set_facecolor('azure')
+    ax.add_patch(poly)
+    fig.savefig('data/poem_plot.png', transparent=True)
+    
     fig.patch.set_facecolor(np.array([20, 20, 16]) / 255)
     ax.set_facecolor(np.array([20, 20, 16]) / 255)
-    
-    ax.add_patch(poly)
     if show: plt.show(block=True)
 
 def visualize(clipname):
