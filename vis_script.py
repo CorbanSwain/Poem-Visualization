@@ -1,85 +1,113 @@
 import numpy as np
 import matplotlib as mpl
 from matplotlib.patches import Polygon
+import matplotlib.pyplot as plt
 import os
 import wave
 import struct
 import sys
 
-clipdir = '/Users/CorbanSwain/Google Drive'
-clipname = 'nigger'
-
-clipname += '.wav'
-clipfile = os.path.join(clipdir, clipname) 
-
 def wav_to_float(wavefile):
     audio = wave.open(wavefile, 'r')
-    tstep = 1 / audio.getframerate()
-    amplitude = []
-    time = []
     frame_counter = range(audio.getnframes())
+    time = np.array(frame_counter) * (1 / audio.getframerate())
+    amplitude = []
     for iFrame in frame_counter:
         wave_data = audio.readframes(1)
-        data = struct.unpack('<i', wave_data)
+        n_bytes = len(wave_data)
+        if n_bytes is 2: fmt = 'h'  
+        elif n_bytes is 4: fmt = '<i'
+        data = struct.unpack(fmt, wave_data)
         amplitude.append(data[0])
-        if time:
-            time.append(time[-1] + tstep)
-        else:
-            time.append(0)
     max_val = max(amplitude)
     amplitude = [v / max_val for v in amplitude]
     audio.close()
-    return (time, amplitude)
+    return (time, np.array(amplitude))
 
-print('Beginning File Import...')
-t, a = np.array(wav_to_float(clipfile))
-print('Finished file import!')
+clipdir = '/Users/CorbanSwain/Google Drive'
+def load_wav(clipname):
+    try:
+        save_data = np.load(clipname + '.npy')
+        t, a = (save_data[:, 0], save_data[:, 1])
+    except:
+        clipfile = os.path.join(clipdir, clipname + '.wav') 
+        print('Beginning File Processing...')
+        t, a = np.array(wav_to_float(clipfile))
+        np.save(clipname, np.column_stack((t, a)))
+    print('Finished file import!')
+    return (t, a)
 
-numel = len(t)
-a_rect = np.multiply(a, a)
-window_size = round(numel * 0.05)
-smooth_fxn_1 = np.ones((window_size,)) / window_size
-def gaussian(x, mu, sig):
-    return np.exp(-np.power(x - mu, 2.) / (2 * np.power(sig, 2.)))
-temp_x = np.linspace(-1, 1, window_size)
-smooth_fxn_2 = gaussian(temp_x, 0, 0.2) + (0.5 / window_size) 
-smooth_fxn = smooth_fxn_2
+def gaussian(x, sig):
+    return np.exp(-np.power(x, 2.) / (2 * np.power(sig, 2.)))
 
-print('Beginning Convolution step...')
-a_smooth = np.convolve(a_rect, smooth_fxn, mode='same')
-print('Finished Convolution!')
+def subsample_audio(t, a):
+    numel = len(t)
+    a_rect = np.multiply(a, a)
+    
+    sample_len = 1000
+    step = np.floor(numel / sample_len).astype(np.int64)
+    new_len = round(sample_len * step).astype(np.int64)
+    selection = np.arange(0, new_len, step)
+    a_sub = []
 
-a_smooth = a_smooth / max(a_smooth)
-new_numel = 1000
-space = np.floor(numel / new_numel).astype(np.int64)
-new_len = round(new_numel * space)
-new_len = new_len.astype(np.int64)
-a_smooth_sub = a_smooth[np.arange(0, new_len, space)]
-t_sub = t[np.arange(0, new_len, space)]
+    window_fraction = 11 / 1000
+    spread = 0.5
+    baseline_shift = 0
+    half_conv_window = round(numel * window_fraction / 2)
+    conv_window = 2 * half_conv_window
+    temp_x = np.linspace(-1, 1, conv_window)
+    smooth_fxn = gaussian(temp_x, spread) + (baseline_shift / conv_window) 
 
-theta = np.linspace(0, 2 * np.pi, new_numel) - (np.pi / 2)
-r = (0.25 + a_smooth_sub) * 5
-xs = np.multiply(r, np.cos(theta))
-ys = np.multiply(r, np.sin(theta))
-poly = Polygon(np.column_stack([xs, ys]), True)
+    print('Beginning sparse convolution ...')
+    for point in selection:
+        window_sel = np.arange(point - half_conv_window,
+                               point + half_conv_window)
+        valid = np.where(np.logical_and(window_sel >= 0, window_sel < numel))
+        a_sub.append(sum(a_rect[window_sel[valid]] * smooth_fxn[valid]))
+    print('Finished sparse convolution.')
 
-print('Calculations are complete!')
+    a_sub = a_sub / max(a_sub)
+    t_sub = t[selection]
+    return (t_sub, a_sub)
 
-import matplotlib.pyplot as plt
+def polar_convert(t, a, flatness):
+    numel = len(t)
+    theta = np.linspace(0, -2 * np.pi, numel) + (np.pi / 2)
+    r = np.power((a / np.log(flatness)), 1.5) + 1
+    theta = np.concatenate((theta, np.flip(theta, 0)))
+    r = np.concatenate((r, np.ones((numel,))))
+    return (r, theta)
 
-do_plot = True
-if do_plot:
-    print('Beginning plot 1...')
+def plot_linear(t, a, show=True):
     plt.figure(0)
     plt.plot(t, a)
-    plt.plot(t_sub, a_smooth_sub)
-    print('Finished Plot 1')
-    
-    print('Beginning plot 2...')
+    if show: plt.show(block=False)
+
+def plot_2_linear(t1, a1, t2, a2, show=True):
+    plt.figure(1)
+    plt.plot(t1, a1)
+    plt.plot(t2, a2)
+    if show: plt.show(block=True)
+
+def plot_polar(r, theta, show=True):
+    xs = np.multiply(r, np.cos(theta))
+    ys = np.multiply(r, np.sin(theta))
+    poly = Polygon(np.column_stack([xs, ys]), True)
     plt.figure(1)
     ax = plt.subplot(111, aspect='equal')
     ax.add_patch(poly)
-    ax.set_xlim((min(xs), max(xs)))
-    ax.set_ylim((min(ys), max(ys)))
-    plt.show()
-    print('Finished Plot 2.')
+    lim = max([-min(xs), max(xs), -min(ys), max(ys)])
+    lim = lim * 1.1
+    ax.set_xlim((-lim, lim))
+    ax.set_ylim((-lim, lim))
+    if show: plt.show(block=True)
+
+def visualize(clipname):
+    t, a = load_wav(clipname)
+    t_s, a_s = subsample_audio(t, a)
+
+    flatness = 2
+    r, th = polar_convert(t_s, a_s, flatness)
+    plot_2_linear(t, a, t_s, a_s)
+    plot_polar(r, th,)
+    
