@@ -25,7 +25,7 @@ def wav_to_float(wavefile):
     return (time, np.array(amplitude))
 
 clipdir = '/Users/CorbanSwain/Google Drive'
-def load_wav(clipname):
+def load_wav(clipname, do_plot=True):
     save_fname = os.path.join('data', clipname + '.npy')
     try:
         save_data = np.load(save_fname)
@@ -36,7 +36,7 @@ def load_wav(clipname):
         t, a = np.array(wav_to_float(clipfile))
         np.save(save_fname, np.column_stack((t, a)))
     print('Finished file import!')
-    plot_linear(t, a)
+    if do_plot: plot_linear(t, a)
     return (t, a)
 
 def gaussian(x, sig):
@@ -84,8 +84,8 @@ def polar_convert(t, a, flatness=2):
 
 plot_style = 'fivethirtyeight'
 def plot_linear(t, a, show=True):
-    plt.figure(0, (15, 5))
-    plt.style.use(plot_style)  
+    plt.style.use(plot_style)
+    plt.figure(0, (15, 5)) 
     plt.plot(t, a, linewidth=0.5)
     plt.xlabel('Time (s)')
     plt.ylabel('Amplitude')
@@ -94,7 +94,6 @@ def plot_linear(t, a, show=True):
 
 def plot_2_linear(t1, a1, t2, a2, show=True):
     plt.figure(1, (15, 5))
-    plt.style.use(plot_style)
     plt.plot(t1, a1, linewidth=0.5)
     plt.plot(t2, a2)
     plt.xlabel('Time (s)')
@@ -122,7 +121,6 @@ def plot_polar(r, theta, show=True):
     plt.xlabel('x')
     plt.ylabel('y')
     plt.title('Polar Conversion')
-    plt.style.use(plot_style)
     if show: plt.show(block=True)
 
 def plot_polar_2(r, theta, show=True):
